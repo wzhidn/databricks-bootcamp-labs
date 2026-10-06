@@ -1,0 +1,37 @@
+# Manually triggered rollback: run this pipeline and choose the commit/tag to redeploy to prod.
+trigger: none
+pr: none
+
+parameters:
+  - name: gitRef
+    displayName: Commit SHA or tag to redeploy to prod
+    type: string
+
+variables:
+  - group: bootcamp-databricks
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: Rollback
+    jobs:
+      - deployment: rollback_prod
+        environment: bootcamp-prod
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                  fetchDepth: 0
+                - script: git checkout ${{ parameters.gitRef }}
+                  displayName: Check out ${{ parameters.gitRef }}
+                - template: templates/install-databricks-cli.yml
+                - script: |
+                    set -euo pipefail
+                    databricks bundle plan -t prod
+                    databricks bundle deploy -t prod
+                  displayName: Redeploy prod
+                  env:
+                    DATABRICKS_HOST: $(DATABRICKS_HOST)
+                    DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)

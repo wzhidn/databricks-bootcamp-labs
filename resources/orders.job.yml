@@ -1,0 +1,45 @@
+# Orchestration written by hand in lab 06 and used as the integration test in lab 06.
+resources:
+  jobs:
+    orders_job:
+      name: orders_job
+      description: Land a new batch of orders, refresh the medallion pipeline, then run quality checks
+      max_concurrent_runs: 1
+      trigger:
+        periodic:
+          interval: 1
+          unit: DAYS
+      parameters:
+        - name: batch
+          default: "1"
+      email_notifications:
+        on_failure:
+          - ${workspace.current_user.userName}
+      tags:
+        domain: sales
+      tasks:
+        - task_key: generate_batch
+          notebook_task:
+            notebook_path: ../src/notebooks/00_generate_data.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${resources.schemas.sales.name}
+              batch: "{{job.parameters.batch}}"
+              orders_per_batch: "2000"
+              with_coupon: "true"
+
+        - task_key: refresh_pipeline
+          depends_on:
+            - task_key: generate_batch
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.orders_pipeline.id}
+
+        - task_key: quality_checks
+          depends_on:
+            - task_key: refresh_pipeline
+          notebook_task:
+            notebook_path: ../src/notebooks/99_quality_checks.py
+            base_parameters:
+              catalog: ${var.catalog}
+              schema: ${resources.schemas.sales.name}
+              max_drop_rate: "0.05"
