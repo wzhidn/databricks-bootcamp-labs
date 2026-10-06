@@ -1,0 +1,13 @@
+[project]
+name = "bootcamp_lib"
+version = "0.1.0"
+description = "Shared code for the Databricks Data & AI Bootcamp labs"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 120
+extend-exclude = ["src/notebooks"]
