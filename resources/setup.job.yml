@@ -1,0 +1,21 @@
+# Generates synthetic sample data into the raw volume (lab 00 / lab 01).
+resources:
+  jobs:
+    generate_data:
+      name: generate_data
+      description: Writes synthetic customers, products, orders and support docs to the raw volume
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${resources.schemas.sales.name}
+        - name: batch
+          default: "0"
+        - name: orders_per_batch
+          default: "5000"
+        - name: with_coupon
+          default: "false"
+      tasks:
+        - task_key: generate
+          notebook_task:
+            notebook_path: ../src/notebooks/00_generate_data.py
