@@ -1,0 +1,15 @@
+# Schema and landing volume for all bootcamp data (lab 01).
+resources:
+  schemas:
+    sales:
+      name: ${var.schema}
+      catalog_name: ${var.catalog}
+      comment: Bootcamp sales domain — bronze, silver, gold and ML assets
+
+  volumes:
+    raw:
+      name: raw
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.sales.name}
+      volume_type: MANAGED
+      comment: Landing zone for generated JSON files and support documents
