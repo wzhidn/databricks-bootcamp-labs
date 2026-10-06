@@ -1,0 +1,18 @@
+# Medallion pipeline built in lab 01 (Spark Declarative Pipelines, SQL).
+resources:
+  pipelines:
+    orders_pipeline:
+      name: orders_pipeline
+      catalog: ${var.catalog}
+      schema: ${resources.schemas.sales.name}
+      serverless: true
+      channel: CURRENT
+      configuration:
+        raw_path: /Volumes/${var.catalog}/${resources.schemas.sales.name}/raw
+      libraries:
+        - file:
+            path: ../src/pipelines/01_bronze.sql
+        - file:
+            path: ../src/pipelines/02_silver.sql
+        - file:
+            path: ../src/pipelines/03_gold.sql

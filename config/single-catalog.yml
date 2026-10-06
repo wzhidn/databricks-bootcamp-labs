@@ -1,0 +1,15 @@
+# Fallback when you cannot create catalogs (see lab 00, step A3).
+# Enable it by adding "config/*.yml" to the include list in databricks.yml.
+# Everything then lives in the built-in "workspace" catalog, isolated by schema.
+targets:
+  dev:
+    variables:
+      catalog: workspace
+  staging:
+    variables:
+      catalog: workspace
+      schema: staging_sales
+  prod:
+    variables:
+      catalog: workspace
+      schema: prod_sales

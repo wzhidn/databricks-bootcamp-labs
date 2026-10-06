@@ -1,0 +1,108 @@
+# CI/CD for the bootcamp bundle on Azure Pipelines (lab 06, optional path).
+# Works with a personal Azure DevOps organisation and a Databricks Free Edition workspace.
+# The code can stay in your GitHub repository (Azure Pipelines "GitHub" source) or in Azure Repos.
+#
+# Library → variable group "bootcamp-databricks":
+#   DATABRICKS_HOST    your workspace URL
+#   DATABRICKS_TOKEN   personal access token  — mark as SECRET (lock icon)
+# Environments: bootcamp-staging, bootcamp-prod (add an Approvals check on prod).
+
+trigger:
+  branches:
+    include: [main]
+
+pr:
+  branches:
+    include: [main]
+
+variables:
+  - group: bootcamp-databricks
+  - name: isMain
+    value: $[eq(variables['Build.SourceBranch'], 'refs/heads/main')]
+  - name: isPR
+    value: $[eq(variables['Build.Reason'], 'PullRequest')]
+
+pool:
+  vmImage: ubuntu-latest
+
+stages:
+  - stage: Test
+    displayName: Unit tests
+    jobs:
+      - job: unit_tests
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: "3.11"
+          - script: pip install -r requirements-dev.txt
+            displayName: Install dev dependencies
+          - script: ruff check src/bootcamp_lib tests
+            displayName: Lint
+          - script: pytest -q --junitxml=test-results.xml
+            displayName: Run unit tests
+          - task: PublishTestResults@2
+            condition: always()
+            inputs:
+              testResultsFiles: test-results.xml
+
+  - stage: PlanStaging
+    displayName: Validate & plan (PR)
+    dependsOn: Test
+    condition: and(succeeded(), eq(variables.isPR, true))
+    jobs:
+      - job: plan
+        steps:
+          - template: templates/install-databricks-cli.yml
+          - script: |
+              set -euo pipefail
+              databricks bundle validate -t staging
+              databricks bundle plan -t staging
+            displayName: bundle validate + plan (staging)
+            env:
+              DATABRICKS_HOST: $(DATABRICKS_HOST)
+              DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)    # secret variables must be mapped explicitly
+
+  - stage: DeployStaging
+    displayName: Deploy to staging
+    dependsOn: Test
+    condition: and(succeeded(), eq(variables.isMain, true))
+    jobs:
+      - deployment: deploy_staging
+        environment: bootcamp-staging
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - template: templates/install-databricks-cli.yml
+                - script: |
+                    set -euo pipefail
+                    databricks bundle validate -t staging
+                    databricks bundle deploy -t staging
+                    databricks bundle run -t staging orders_job --params batch=$(Build.BuildId)
+                  displayName: Deploy and run integration job
+                  env:
+                    DATABRICKS_HOST: $(DATABRICKS_HOST)
+                    DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
+
+  - stage: DeployProd
+    displayName: Deploy to prod
+    dependsOn: DeployStaging
+    condition: and(succeeded(), eq(variables.isMain, true))
+    jobs:
+      - deployment: deploy_prod
+        environment: bootcamp-prod        # Approvals check configured on this environment
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+                - template: templates/install-databricks-cli.yml
+                - script: |
+                    set -euo pipefail
+                    databricks bundle validate -t prod
+                    databricks bundle deploy -t prod
+                  displayName: Deploy to prod
+                  env:
+                    DATABRICKS_HOST: $(DATABRICKS_HOST)
+                    DATABRICKS_TOKEN: $(DATABRICKS_TOKEN)
