@@ -1,0 +1,7 @@
+# Already in databricks.yml: the warehouse ID is looked up by name, never hardcoded in Git.
+variables:
+  warehouse_name:
+    default: Serverless Starter Warehouse     # Free Edition's single warehouse
+  warehouse_id:
+    lookup:
+      warehouse: ${var.warehouse_name}

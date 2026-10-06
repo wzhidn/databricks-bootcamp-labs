@@ -1,0 +1,13 @@
+# Example of what `databricks bundle generate job` writes (your IDs and paths will differ).
+resources:
+  jobs:
+    my_first_job:
+      name: my_first_job
+      tasks:
+        - task_key: setup
+          notebook_task:
+            notebook_path: ../src/_setup.py
+            source: WORKSPACE
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
