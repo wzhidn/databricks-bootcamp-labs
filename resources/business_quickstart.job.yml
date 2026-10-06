@@ -1,0 +1,49 @@
+# SOLUTION-FILE lab-06
+# One click for business participants: builds everything the business (UI) labs need in your dev target.
+# Run it from the bundle's Deployments panel after deploying the `solution` branch (lab 00, business path).
+resources:
+  jobs:
+    business_quickstart:
+      name: business_quickstart
+      description: Generate data, run the pipeline and build governed tables, star schema, churn model and enriched tickets
+      max_concurrent_runs: 1
+      parameters:
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${resources.schemas.sales.name}
+      tasks:
+        - task_key: generate_data
+          notebook_task:
+            notebook_path: ../src/notebooks/00_generate_data.py
+            base_parameters:
+              batch: "0"
+              with_coupon: "true"
+        - task_key: pipeline
+          depends_on: [{task_key: generate_data}]
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.orders_pipeline.id}
+        - task_key: delta_and_iceberg
+          depends_on: [{task_key: pipeline}]
+          notebook_task:
+            notebook_path: ../src/notebooks/01_delta_iceberg.py
+        - task_key: governance
+          depends_on: [{task_key: delta_and_iceberg}]
+          notebook_task:
+            notebook_path: ../src/notebooks/02_governance.py
+        - task_key: star_schema
+          depends_on: [{task_key: governance}]
+          notebook_task:
+            notebook_path: ../src/notebooks/03_bi_model.py
+        - task_key: churn_model
+          depends_on: [{task_key: star_schema}]
+          notebook_task:
+            notebook_path: ../src/notebooks/04_ml_training.py
+        - task_key: genai_tables
+          depends_on: [{task_key: churn_model}]
+          notebook_task:
+            notebook_path: ../src/notebooks/05_ai_functions.py
+        - task_key: agent_tools
+          depends_on: [{task_key: genai_tables}]
+          notebook_task:
+            notebook_path: ../src/notebooks/05_agent_tools.py

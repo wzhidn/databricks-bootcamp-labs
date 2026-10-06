@@ -1,0 +1,8 @@
+# Installs the latest Databricks CLI on the agent.
+# For reproducible deployments, pin a version by downloading a specific release
+# from https://github.com/databricks/cli/releases instead.
+steps:
+  - script: |
+      curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+      databricks --version
+    displayName: Install Databricks CLI
