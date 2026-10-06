@@ -1,0 +1,8 @@
+# Example of what `databricks bundle generate dashboard` writes.
+# The dashboard definition itself is saved next to it as a .lvdash.json file.
+resources:
+  dashboards:
+    sales_overview:
+      display_name: Sales overview
+      warehouse_id: ${var.warehouse_id}        # replace the generated ID with a lookup variable
+      file_path: ../src/sales_overview.lvdash.json

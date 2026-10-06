@@ -1,0 +1,73 @@
+# Databricks Data & AI Bootcamp — bundle root
+# Designed for ONE Databricks Free Edition workspace per trainee:
+# dev / staging / prod are isolated by catalog, schema, workspace path, naming and triggers
+# inside that single workspace (Free Edition has one workspace and no account console).
+# Docs: https://docs.databricks.com/aws/en/dev-tools/bundles
+bundle:
+  name: bootcamp_lakehouse
+  engine: direct              # direct deployment engine (default since CLI 1.3)
+  databricks_cli_version: ">= 1.14.0"
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for this environment (created in lab 00)
+    default: bootcamp_dev
+  schema:
+    description: Schema name (dev mode prefixes it with dev_<your_user>_)
+    default: sales
+  warehouse_name:
+    description: Name of your SQL warehouse (Free Edition has exactly one)
+    default: Serverless Starter Warehouse
+  warehouse_id:
+    description: Resolved from warehouse_name — never hardcode IDs
+    lookup:
+      warehouse: ${var.warehouse_name}
+  churn_model_version:
+    description: Registered model version served by the churn endpoint (lab 04)
+    default: "1"
+
+targets:
+  # Interactive development: every deploy is private to you.
+  dev:
+    mode: development
+    default: true
+    # workspace.host comes from your CLI profile / the workspace UI
+
+  # Deployed only by CI (lab 06). Same workspace, separate catalog + path.
+  staging:
+    mode: production
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: bootcamp_staging
+      schema: sales
+    presets:
+      name_prefix: "[staging] "
+      tags:
+        env: staging
+        project: bootcamp
+      trigger_pause_status: PAUSED   # CI triggers runs explicitly
+    # Optional (lab 00, part 3.2): run as a service principal instead of the CI token's user.
+    # run_as:
+    #   service_principal_name: <application-id>
+
+  prod:
+    mode: production
+    workspace:
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}
+    variables:
+      catalog: bootcamp_prod
+      schema: sales
+    presets:
+      name_prefix: "[prod] "
+      tags:
+        env: prod
+        project: bootcamp
+      # Free Edition allows 5 concurrent tasks and one active pipeline per type:
+      # keep prod schedules paused during the bootcamp; set ACTIVE to go live.
+      trigger_pause_status: PAUSED
+    # run_as:
+    #   service_principal_name: <application-id>
